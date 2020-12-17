@@ -29,33 +29,8 @@ namespace SuperLottoBuilderService.Controllers
             var list = new List<string>();
             for (int k = 0; k < Nums; k++)
             {
-                var arr = new string[7];
-                for (int i = 0; i < 7; i++)
-                {
-                    bool isContinue = true;
-                    while(isContinue)
-                    {
-                        Random random = new Random(Guid.NewGuid().GetHashCode());
-                        string randomResult = "";
-                        if (i < 5)
-                        {
-                            randomResult = random.Next(1, 35).ToString().PadLeft(2, '0');
-                        }
-                        else
-                        {
-                            randomResult = random.Next(1, 12).ToString().PadLeft(2, '0');
-                        }
-                        if(!arr.Contains(randomResult))
-                        {
-                            arr[i] = randomResult;
-                            isContinue = false;
-                        }
-                    }
-                   
-                }
-                var array = arr.Take(5).OrderBy(a => a).ToList();
-                array.AddRange(arr.Skip(5).OrderBy(a => a));
-                list.Add(string.Join(" ", array));
+              
+                list.Add(GetCode());
             }
             this._context.GenerateNumbers.AddRange(list.Select(a => new GenerateNumber()
             {
@@ -142,6 +117,69 @@ namespace SuperLottoBuilderService.Controllers
             return view;
         }
 
+        [HttpPost]
+        public async Task<List<WinningView>> Simulate(int begin,int end,int num)
+        {
+            var list = new List<WinningView>();
+            for (int i=begin;i<end; i++)
+            {
+                await this.GenerateSelectionNumbers(i.ToString(),num);
+                list.Add(await this.WinningConfim(i.ToString(), GetCode()));
+            }
+            return list;
+        }
+
+        [HttpPost]
+        public  async Task<List<string>> GetWinningNumber (int count)
+        {
+            var list = new List<string>();
+            while(list.Count<count)
+            {
+                var number = GetCode();
+                for (int i = 0; i < 1000000; i++)
+                {
+                    var code = GetCode();
+                    if (code == number)
+                    {
+                        list.Add(number);
+                        break;
+                    }
+                }
+            }
+            return list;
+        }
+         
+        private static string GetCode()
+        {
+            var arr = new string[7];
+            for (int i = 0; i < 7; i++)
+            {
+                bool isContinue = true;
+                while (isContinue)
+                {
+                    Random random = new Random(Guid.NewGuid().GetHashCode());
+                    string randomResult = "";
+                    if (i < 5)
+                    {
+                        randomResult = random.Next(1, 35).ToString().PadLeft(2, '0');
+                    }
+                    else
+                    {
+                        randomResult = random.Next(1, 12).ToString().PadLeft(2, '0');
+                    }
+                    if (!arr.Contains(randomResult))
+                    {
+                        arr[i] = randomResult;
+                        isContinue = false;
+                    }
+                }
+
+            }
+            var array = arr.Take(5).OrderBy(a => a).ToList();
+            array.AddRange(arr.Skip(5).OrderBy(a => a));
+            return string.Join(" ", array);
+        }
+
         private static  bool FrontConfim(int count,string selectCode,string winningCode)
         {
             var selectfront = selectCode.Split(' ').Take(5);
@@ -155,6 +193,9 @@ namespace SuperLottoBuilderService.Controllers
             var winningfront = winningCode.Split(' ').Skip(5);
             return selectfront.Intersect(winningfront).Count() == count;
         }
+
+
+
 
     }
 }
